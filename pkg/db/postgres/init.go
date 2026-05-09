@@ -7,6 +7,7 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/jmoiron/sqlx"
+	"github.com/uptrace/opentelemetry-go-extra/otelsql"
 	"github.com/uptrace/opentelemetry-go-extra/otelsqlx"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
@@ -26,7 +27,7 @@ func NewPostgresDB(dsn PostgresDsn) (*sqlx.DB, error) {
 	)
 
 	db, err := otelsqlx.Open("postgres", connStr,
-		otelsqlx.WithAttributes(semconv.DBSystemPostgreSQL),
+		otelsql.WithAttributes(semconv.DBSystemPostgreSQL),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("postgres open: %w", err)
