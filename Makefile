@@ -1,47 +1,27 @@
-# ParkirPintar Makefile — orchestrates dev workflow
-.PHONY: help up down logs seed proto test test-unit test-integration test-e2e \
-        build smoke fmt vet lint mocks migrate clean
+.PHONY: help run build test test-unit test-integration lint vet fmt mocks proto \
+        migrate-up migrate-down docker-build docker-run down clean
 
-APP_NAME := parkirpintar
-SERVICES := gateway reservation billing payment presence notification user
+PROJECT_ENV ?= local
 
 help: ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-# ── Local stack ────────────────────────────────────────────────────────────────
-up: ## Start full local stack (postgres, redis, rabbitmq, all services)
-	podman compose -f deployments/docker-compose.yml up -d --build
+# ── Run / build ────────────────────────────────────────────────────────────────
+run: ## Run user-service against local infra (postgres, redis, otel)
+	PROJECT_ENV=$(PROJECT_ENV) go run ./cmd/user
 
-down: ## Stop & remove local stack
-	docker compose -f deployments/docker-compose.yml down -v
+build: ## Compile binary into bin/user
+	CGO_ENABLED=0 go build -o bin/user ./cmd/user
 
-logs: ## Tail logs from all services
-	docker compose -f deployments/docker-compose.yml logs -f
+# ── Tests ──────────────────────────────────────────────────────────────────────
+test: ## Run all tests
+	go test ./...
 
-seed: ## Seed parking spots (150 cars + 250 motorcycles)
-	docker compose -f deployments/docker-compose.yml exec -T postgres psql -U postgres -d parkirpintar -f /docker-entrypoint-initdb.d/02_seed.sql
+test-unit: ## Unit tests only (no infra)
+	go test -short -race -count=1 ./pkg/... ./internal/...
 
-smoke: ## Health check all services
-	@for s in $(SERVICES); do \
-	  echo "→ $$s"; \
-	  curl -sf http://localhost:8080/healthz/$$s || echo "DOWN: $$s"; \
-	done
-
-# ── Code ───────────────────────────────────────────────────────────────────────
-proto: ## Generate Go code from .proto files
-	./scripts/gen_proto.sh
-
-build: ## Compile all service binaries
-	@for s in $(SERVICES) worker; do \
-	  echo "→ building $$s"; \
-	  go build -o bin/$$s ./cmd/$$s; \
-	done
-
-mocks: ## Regenerate mocks (mockgen)
-	./scripts/gen_mocks.sh
-
-migrate: ## Apply DB migrations
-	./scripts/migrate.sh up
+test-integration: ## Integration tests (requires postgres on localhost:5432)
+	go test -race -count=1 -tags=integration ./test/integration/...
 
 # ── Quality ────────────────────────────────────────────────────────────────────
 fmt: ## Format Go code
@@ -53,17 +33,34 @@ vet: ## Run go vet
 lint: ## Run golangci-lint (requires install)
 	golangci-lint run ./...
 
-# ── Tests ──────────────────────────────────────────────────────────────────────
-test: test-unit test-integration ## Run unit + integration
+# ── Code generation ────────────────────────────────────────────────────────────
+proto: ## Regenerate api/proto/user/v1/{user.pb.go, user_grpc.pb.go}
+	@which protoc >/dev/null || (echo "protoc not installed (brew install protobuf)" && exit 1)
+	@which protoc-gen-go >/dev/null || (echo "protoc-gen-go not installed (go install google.golang.org/protobuf/cmd/protoc-gen-go@latest)" && exit 1)
+	protoc --go_out=. --go_opt=paths=source_relative \
+	       --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+	       api/proto/user/v1/user.proto
 
-test-unit: ## Unit tests (no infra)
-	go test -short -race -count=1 ./pkg/... ./internal/...
+mocks: ## Regenerate gomock test doubles under mock/
+	./scripts/gen_mocks.sh
 
-test-integration: ## Integration tests (requires `make up`)
-	go test -race -count=1 -tags=integration ./test/integration/...
+# ── DB migrations ──────────────────────────────────────────────────────────────
+migrate-up: ## Apply DB migrations
+	./scripts/migrate.sh up
 
-test-e2e: ## End-to-end tests (requires `make up && make seed`)
-	go test -race -count=1 -tags=e2e -timeout=5m ./test/e2e/...
+migrate-down: ## Roll back one migration
+	./scripts/migrate.sh down 1
 
-clean: ## Remove build artifacts
+# ── Container / docker compose ────────────────────────────────────────────────
+docker-build: ## Build the service container image
+	docker build -t user-service:local .
+
+docker-run: ## Bring up the service via deployments/docker-compose.yml (expects ../infra up)
+	docker compose -f deployments/docker-compose.yml up --build
+
+down: ## Tear down the service's docker compose stack
+	docker compose -f deployments/docker-compose.yml down
+
+# ── Housekeeping ───────────────────────────────────────────────────────────────
+clean: ## Remove build artefacts
 	rm -rf bin/ coverage.out
