@@ -1,0 +1,27 @@
+# user-service local stack.
+#
+# Connects to the shared infra defined in ../../infra/docker-compose.yml.
+# Bring infra up first:
+#   cd ../../infra && docker compose up -d
+#
+# Then build & run user-service:
+#   docker compose -f deployments/docker-compose.yml up --build
+
+services:
+  user-service:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: user-service
+    env_file: ../configs/.env.example
+    environment:
+      DB_HOST: host.docker.internal
+      REDIS_HOST: host.docker.internal
+      OTLP_ENDPOINT: host.docker.internal:4317
+      APP_PORT: "8080"
+      GRPC_PORT: "9094"
+    ports:
+      - "8080:8080"   # REST (mini app)
+      - "9094:9094"   # gRPC (s2s)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

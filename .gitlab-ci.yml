@@ -1,0 +1,62 @@
+# GitLab CI — mirrors GitHub Actions in spirit (committed for the company GitLab).
+stages:
+  - lint
+  - test
+  - build
+  - deploy
+
+variables:
+  GO_VERSION: "1.22"
+
+lint:
+  stage: lint
+  image: golangci/golangci-lint:v1.59-alpine
+  script:
+    - golangci-lint run ./...
+  only: [merge_requests, main]
+
+unit-test:
+  stage: test
+  image: golang:${GO_VERSION}-alpine
+  script:
+    - go test -race -short -count=1 ./pkg/... ./internal/...
+  artifacts:
+    reports:
+      junit: report.xml
+
+integration-test:
+  stage: test
+  image: golang:${GO_VERSION}-alpine
+  services:
+    - name: postgres:16-alpine
+      alias: postgres
+  variables:
+    POSTGRES_PASSWORD: postgres
+    POSTGRES_DB: parkirpintar
+  script:
+    - apk add --no-cache postgresql-client
+    - psql "host=postgres user=postgres password=postgres dbname=parkirpintar" -f data/init.sql
+    - psql "host=postgres user=postgres password=postgres dbname=parkirpintar" -f data/seed.sql
+    - go test -race -count=1 -tags=integration ./test/integration/...
+
+build:
+  stage: build
+  image: docker:25
+  services: [docker:25-dind]
+  parallel:
+    matrix:
+      - SERVICE: [reservation, billing, gateway, payment, presence, notification]
+  script:
+    - docker build --build-arg SERVICE=$SERVICE -t $CI_REGISTRY_IMAGE/$SERVICE:$CI_COMMIT_SHORT_SHA .
+    - docker push $CI_REGISTRY_IMAGE/$SERVICE:$CI_COMMIT_SHORT_SHA
+  only: [main]
+
+deploy-staging:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  script:
+    - kubectl -n parkirpintar set image deploy/reservation reservation=$CI_REGISTRY_IMAGE/reservation:$CI_COMMIT_SHORT_SHA
+    - kubectl -n parkirpintar set image deploy/billing     billing=$CI_REGISTRY_IMAGE/billing:$CI_COMMIT_SHORT_SHA
+    - kubectl -n parkirpintar rollout status deploy/reservation
+  environment: staging
+  only: [main]

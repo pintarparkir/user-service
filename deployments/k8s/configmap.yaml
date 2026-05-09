@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: parkirpintar-config
+data:
+  APP_NAME: parkirpintar
+  APP_ENV: production
+  DB_HOST: postgres-primary.parkirpintar.svc.cluster.local
+  DB_PORT: "5432"
+  DB_NAME: parkirpintar
+  DB_MAX_OPEN: "25"
+  DB_MAX_IDLE: "10"
+  REDIS_HOST: redis.parkirpintar.svc.cluster.local
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  REDIS_APP_CONFIG: parkirpintar
+  RABBIT_URL: amqp://rabbitmq.parkirpintar.svc.cluster.local:5672/
+  RABBIT_EXCHANGE: parkirpintar.events
+  OTLP_ENDPOINT: otel-collector.observability.svc.cluster.local:4317
+  BILLING_GRPC_ADDR: billing.parkirpintar.svc.cluster.local:9091
+  PAYMENT_GRPC_ADDR: payment.parkirpintar.svc.cluster.local:9092
+  PRESENCE_GRPC_ADDR: presence.parkirpintar.svc.cluster.local:9093
+  BOOKING_FEE_IDR: "5000"
+  HOURLY_FEE_IDR: "5000"
+  OVERNIGHT_FLAT_IDR: "20000"
+  CANCEL_LATE_FEE_IDR: "5000"
+  NOSHOW_FEE_IDR: "5000"
+  HOLD_DURATION_MINUTES: "60"
+  CANCEL_GRACE_SECONDS: "120"
+  NOSHOW_POLL_SECONDS: "30"
+  OUTBOX_POLL_SECONDS: "1"
+---
+# Secrets are managed externally (Vault / GCP Secret Manager). This stub
+# documents the keys; never commit real values.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: parkirpintar-secrets
+type: Opaque
+stringData:
+  DB_USERNAME: PLACEHOLDER
+  DB_PASSWORD: PLACEHOLDER
+  REDIS_PASSWORD: PLACEHOLDER

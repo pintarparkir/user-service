@@ -1,0 +1,5 @@
+BEGIN;
+DROP TABLE IF EXISTS vehicle;
+DROP TABLE IF EXISTS user_profile;
+DROP TYPE IF EXISTS user_status;
+COMMIT;
