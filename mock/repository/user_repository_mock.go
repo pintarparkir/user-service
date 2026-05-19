@@ -131,11 +131,16 @@ func (m *MockUserRepository) List(ctx context.Context, req model.ListUsersReques
 	m.mu.Lock(); defer m.mu.Unlock()
 	out := make([]model.User, 0, len(m.byID))
 	for _, u := range m.byID {
-		if u.Status == model.USER_DELETED {
-			continue
-		}
-		if req.StatusFilter != "" && u.Status != req.StatusFilter {
-			continue
+		if req.StatusFilter != "" {
+			// Explicit filter: return only matching status (including DELETED).
+			if u.Status != req.StatusFilter {
+				continue
+			}
+		} else {
+			// Default: exclude soft-deleted rows.
+			if u.Status == model.USER_DELETED {
+				continue
+			}
 		}
 		out = append(out, u)
 	}

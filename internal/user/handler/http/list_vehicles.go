@@ -1,15 +1,15 @@
 package http
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+
+	"github.com/farid/user-service/pkg/utils"
 )
 
 func (h *userHandler) listVehicles(c *gin.Context) {
 	vehicles, err := h.usecase.ListVehicles(c.Request.Context(), c.GetString(ctxDriverID))
 	if err != nil {
-		renderError(c, err)
+		utils.Error(c, err)
 		return
 	}
 
@@ -18,5 +18,5 @@ func (h *userHandler) listVehicles(c *gin.Context) {
 		dtos = append(dtos, toVehicleDTO(&vehicles[i]))
 	}
 
-	c.JSON(http.StatusOK, gin.H{"vehicles": dtos})
+	utils.OK(c, gin.H{"vehicles": dtos}, "vehicles retrieved successfully")
 }

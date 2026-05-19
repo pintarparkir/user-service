@@ -1,18 +1,17 @@
 package http
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 
 	"github.com/farid/user-service/internal/user/model"
+	"github.com/farid/user-service/pkg/utils"
 )
 
 // PUT /v1/me — update own profile (name, email). Phone is managed by super-app.
 func (h *userHandler) updateMe(c *gin.Context) {
 	var body updateMeReq
 	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "BAD_REQUEST", "message": err.Error()})
+		utils.Error(c, err)
 		return
 	}
 
@@ -23,9 +22,9 @@ func (h *userHandler) updateMe(c *gin.Context) {
 		ExpectedVersion: body.ExpectedVersion,
 	})
 	if err != nil {
-		renderError(c, err)
+		utils.Error(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, toProfileDTO(out))
+	utils.OK(c, toProfileDTO(out), "profile updated successfully")
 }

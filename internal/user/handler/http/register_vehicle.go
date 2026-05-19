@@ -1,17 +1,16 @@
 package http
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 
 	"github.com/farid/user-service/internal/user/model"
+	"github.com/farid/user-service/pkg/utils"
 )
 
 func (h *userHandler) registerVehicle(c *gin.Context) {
 	var body registerVehicleReq
 	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "BAD_REQUEST", "message": err.Error()})
+		utils.Error(c, err)
 		return
 	}
 
@@ -22,9 +21,9 @@ func (h *userHandler) registerVehicle(c *gin.Context) {
 		IsDefault:   body.IsDefault,
 	})
 	if err != nil {
-		renderError(c, err)
+		utils.Error(c, err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, toVehicleDTO(vehicle))
+	utils.Created(c, toVehicleDTO(vehicle), "vehicle registered successfully")
 }
