@@ -3,6 +3,7 @@ package utils
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -67,7 +68,8 @@ func Error(c *gin.Context, err error) {
 	var errorCode string
 	var errorMessage string
 
-	if appErr, ok := err.(*apperror.AppError); ok {
+	var appErr *apperror.AppError
+	if errors.As(err, &appErr) {
 		errorCode = appErr.Code
 		errorMessage = appErr.Message
 

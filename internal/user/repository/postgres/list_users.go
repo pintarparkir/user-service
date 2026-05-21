@@ -16,10 +16,10 @@ import (
 func (r *userRepository) List(ctx context.Context, req model.ListUsersRequest) ([]model.User, int, error) {
 	limit := req.Limit
 	if limit <= 0 {
-		limit = model.DEFAULT_LIST_LIMIT
+		limit = model.DefaultListLimit
 	}
-	if limit > model.MAX_LIST_LIMIT {
-		limit = model.MAX_LIST_LIMIT
+	if limit > model.MaxListLimit {
+		limit = model.MaxListLimit
 	}
 	offset := req.Offset
 	if offset < 0 {
@@ -44,7 +44,7 @@ func (r *userRepository) List(ctx context.Context, req model.ListUsersRequest) (
 	if err != nil {
 		return nil, 0, fmt.Errorf("list users: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	users := make([]model.User, 0, limit)
 	for rows.Next() {

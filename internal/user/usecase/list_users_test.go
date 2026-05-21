@@ -69,9 +69,9 @@ func TestListUsers_StatusFilter(t *testing.T) {
 
 	// Filtering by DELETED should return the deleted user only.
 	resp, err := uc.ListUsers(context.Background(), model.ListUsersRequest{
-		StatusFilter: model.USER_DELETED,
+		StatusFilter: model.UserDeleted,
 	})
 	require.NoError(t, err)
 	require.Equal(t, 1, resp.Total)
-	require.Equal(t, model.USER_DELETED, resp.Users[0].Status)
+	require.Equal(t, model.UserDeleted, resp.Users[0].Status)
 }

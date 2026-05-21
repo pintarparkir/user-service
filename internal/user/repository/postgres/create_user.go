@@ -1,3 +1,4 @@
+// Package postgres implements user repository using PostgreSQL.
 package postgres
 
 import (

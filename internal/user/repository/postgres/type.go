@@ -32,17 +32,3 @@ const columns = `
 	version,
 	created_at,
 	updated_at`
-
-// userRow is a flat scan target (the User struct can't directly scan
-// because PhoneE164/Email are computed via decrypt — they're string, not bytea).
-type userRow struct {
-	ID             string `db:"id"`
-	ExternalUserID string `db:"external_user_id"`
-	FullName       string `db:"full_name"`
-	PhoneE164      string `db:"phone_e164"`
-	Email          string `db:"email"`
-	Status         string `db:"status"`
-	Version        int    `db:"version"`
-	CreatedAt      any    `db:"created_at"`
-	UpdatedAt      any    `db:"updated_at"`
-}

@@ -28,7 +28,7 @@ func (r *userRepository) GetOrCreateByMSISDN(ctx context.Context, msisdn, extern
 		ExternalUserID: externalUserID,
 		FullName:       name,
 		PhoneE164:      msisdn,
-		Status:         model.USER_ACTIVE,
+		Status:         model.UserActive,
 	})
 	if err != nil {
 		if apperror.Is(err, apperror.ErrConflict) {

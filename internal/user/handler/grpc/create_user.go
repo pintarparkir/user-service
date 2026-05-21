@@ -1,3 +1,4 @@
+// Package grpc implements gRPC handlers for user service.
 package grpc
 
 import (

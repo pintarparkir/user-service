@@ -22,7 +22,7 @@ func TestUpsertDriver_CreatesNewDriverOnFirstContact(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, got)
 	require.NotEmpty(t, got.ID)
-	require.Equal(t, model.USER_ACTIVE, got.Status)
+	require.Equal(t, model.UserActive, got.Status)
 }
 
 func TestUpsertDriver_Idempotent_ReturnsSameUser(t *testing.T) {

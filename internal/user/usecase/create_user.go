@@ -1,3 +1,4 @@
+// Package usecase implements user business logic.
 package usecase
 
 import (
@@ -29,7 +30,7 @@ func (u *userUsecase) CreateUser(ctx context.Context, req model.CreateUserReques
 		FullName:       req.FullName,
 		PhoneE164:      req.PhoneE164,
 		Email:          req.Email,
-		Status:         model.USER_ACTIVE,
+		Status:         model.UserActive,
 	})
 	if err != nil {
 		// Race: a concurrent caller won the insert — fetch and return.

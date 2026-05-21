@@ -48,7 +48,7 @@ func TestIntegration_User_CRUD_RoundTrip(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, created.ID)
-	require.Equal(t, model.USER_ACTIVE, created.Status)
+	require.Equal(t, model.UserActive, created.Status)
 	t.Cleanup(func() { _ = uc.DeleteUser(ctx, created.ID) })
 
 	// 2. PII round-trip — phone/email returned plaintext after pgcrypto decrypt.

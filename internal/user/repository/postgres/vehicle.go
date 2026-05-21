@@ -66,7 +66,7 @@ func (r *vehicleRepository) ListByDriverID(ctx context.Context, driverID string)
 	if err != nil {
 		return nil, fmt.Errorf("list vehicles: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var vehicles []model.Vehicle
 	for rows.Next() {

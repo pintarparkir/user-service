@@ -57,11 +57,15 @@ func main() {
 	if err != nil {
 		logger.Fatal(ctx, "postgres init failed", map[string]interface{}{logger.ErrorKey: err.Error()})
 	}
-	defer db.Close()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			logger.Error(ctx, "db.Close failed", map[string]interface{}{logger.ErrorKey: closeErr.Error()})
+		}
+	}()
 
 	cache := redis.InitConnection(cfg.RedisDB, cfg.RedisHost, cfg.RedisPort, cfg.RedisPassword, cfg.RedisAppConfig)
-	if err := cache.Ping(ctx); err != nil {
-		logger.Warn(ctx, "redis ping failed (continuing without cache)", map[string]interface{}{logger.ErrorKey: err.Error()})
+	if pingErr := cache.Ping(ctx); pingErr != nil {
+		logger.Warn(ctx, "redis ping failed (continuing without cache)", map[string]interface{}{logger.ErrorKey: pingErr.Error()})
 	}
 
 	// ── Domain wiring ────────────────────────────────────────────────────────
@@ -73,10 +77,10 @@ func main() {
 	grpcSrv, err := grpcserver.NewGrpcServer(cfg.GrpcPort, grpcserver.Options{
 		IdempotencyStore: idempotency.NewPostgresStore(db),
 		IdempotentMethods: []string{
-			model.SCOPE_CREATE_USER,
-			model.SCOPE_UPDATE_USER,
-			model.SCOPE_UPSERT_DRIVER,
-			model.SCOPE_REGISTER_VEHICLE,
+			model.ScopeCreateUser,
+			model.ScopeUpdateUser,
+			model.ScopeUpsertDriver,
+			model.ScopeRegisterVehicle,
 		},
 	})
 	if err != nil {

@@ -24,7 +24,7 @@ func TestDeleteUser_SoftDeletesUser(t *testing.T) {
 
 	user, err := repo.GetByID(context.Background(), created.ID)
 	require.NoError(t, err)
-	require.Equal(t, model.USER_DELETED, user.Status, "status should be DELETED after soft delete")
+	require.Equal(t, model.UserDeleted, user.Status, "status should be DELETED after soft delete")
 }
 
 func TestDeleteUser_Idempotent(t *testing.T) {

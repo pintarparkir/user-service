@@ -23,7 +23,7 @@ func TestCreateUser_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, got)
 	require.Equal(t, "Farid", got.FullName)
-	require.Equal(t, model.USER_ACTIVE, got.Status)
+	require.Equal(t, model.UserActive, got.Status)
 	require.Equal(t, 1, got.Version)
 }
 

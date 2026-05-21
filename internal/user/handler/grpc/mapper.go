@@ -43,11 +43,11 @@ func toVehicleProto(v *model.Vehicle) *userv1.Vehicle {
 
 func statusToProto(s model.UserStatus) userv1.UserStatus {
 	switch s {
-	case model.USER_ACTIVE:
+	case model.UserActive:
 		return userv1.UserStatus_USER_STATUS_ACTIVE
-	case model.USER_SUSPENDED:
+	case model.UserSuspended:
 		return userv1.UserStatus_USER_STATUS_SUSPENDED
-	case model.USER_DELETED:
+	case model.UserDeleted:
 		return userv1.UserStatus_USER_STATUS_DELETED
 	}
 	return userv1.UserStatus_USER_STATUS_UNSPECIFIED
@@ -56,11 +56,11 @@ func statusToProto(s model.UserStatus) userv1.UserStatus {
 func statusFromProto(s userv1.UserStatus) model.UserStatus {
 	switch s {
 	case userv1.UserStatus_USER_STATUS_ACTIVE:
-		return model.USER_ACTIVE
+		return model.UserActive
 	case userv1.UserStatus_USER_STATUS_SUSPENDED:
-		return model.USER_SUSPENDED
+		return model.UserSuspended
 	case userv1.UserStatus_USER_STATUS_DELETED:
-		return model.USER_DELETED
+		return model.UserDeleted
 	}
 	return ""
 }

@@ -1,3 +1,4 @@
+// Package repository defines user repository interfaces.
 package repository
 
 import (
