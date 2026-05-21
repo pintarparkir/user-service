@@ -34,7 +34,7 @@ git add .
 git commit -m "feat: initial ParkirPintar backend solution
 
 Solution Development Assessment 2026 - Smart Parking Marketplace.
-Stack: Go 1.22, gRPC over HTTP/2, PostgreSQL 16, Redis, RabbitMQ.
+Stack: Go 1.25, gRPC over HTTP/2, PostgreSQL 16, Redis, RabbitMQ.
 Boilerplate: cmd/internal/pkg layout per Telkomsel B.4 standard.
 See README.md for HLD, LLD, ERD, and ADRs."
 

@@ -65,9 +65,9 @@ func main() {
 	}
 
 	// ── Domain wiring ────────────────────────────────────────────────────────
-	repo        := userpg.NewUserRepository(db, cfg.PgCryptoKey)
+	repo := userpg.NewUserRepository(db, cfg.PgCryptoKey)
 	vehicleRepo := userpg.NewVehicleRepository(db)
-	uc          := useruc.NewUserUsecase(repo, vehicleRepo, cache)
+	uc := useruc.NewUserUsecase(repo, vehicleRepo, cache)
 
 	// ── gRPC server ──────────────────────────────────────────────────────────
 	grpcSrv, err := grpcserver.NewGrpcServer(cfg.GrpcPort, grpcserver.Options{

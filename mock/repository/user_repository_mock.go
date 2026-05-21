@@ -12,9 +12,9 @@ import (
 
 // MockUserRepository is a thread-safe in-memory fake for tests.
 type MockUserRepository struct {
-	mu       sync.Mutex
-	byID     map[string]model.User
-	byExtID  map[string]string // external_user_id → id
+	mu      sync.Mutex
+	byID    map[string]model.User
+	byExtID map[string]string // external_user_id → id
 
 	CreateFn              func(ctx context.Context, u model.User) (model.User, error)
 	GetByIDFn             func(ctx context.Context, id string) (*model.User, error)
@@ -34,7 +34,8 @@ func (m *MockUserRepository) Create(ctx context.Context, u model.User) (model.Us
 	if m.CreateFn != nil {
 		return m.CreateFn(ctx, u)
 	}
-	m.mu.Lock(); defer m.mu.Unlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if u.ID == "" {
 		u.ID = "mock-" + u.ExternalUserID
 	}
@@ -48,7 +49,8 @@ func (m *MockUserRepository) GetByID(ctx context.Context, id string) (*model.Use
 	if m.GetByIDFn != nil {
 		return m.GetByIDFn(ctx, id)
 	}
-	m.mu.Lock(); defer m.mu.Unlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if u, ok := m.byID[id]; ok {
 		return &u, nil
 	}
@@ -76,7 +78,8 @@ func (m *MockUserRepository) GetByExternalID(ctx context.Context, extID string) 
 	if m.GetByExtIDFn != nil {
 		return m.GetByExtIDFn(ctx, extID)
 	}
-	m.mu.Lock(); defer m.mu.Unlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if id, ok := m.byExtID[extID]; ok {
 		u := m.byID[id]
 		return &u, nil
@@ -88,7 +91,8 @@ func (m *MockUserRepository) Update(ctx context.Context, u model.User, ev int) (
 	if m.UpdateFn != nil {
 		return m.UpdateFn(ctx, u, ev)
 	}
-	m.mu.Lock(); defer m.mu.Unlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	cur, ok := m.byID[u.ID]
 	if !ok {
 		return model.User{}, notFound()
@@ -114,7 +118,8 @@ func (m *MockUserRepository) SoftDelete(ctx context.Context, id string) error {
 	if m.SoftDeleteFn != nil {
 		return m.SoftDeleteFn(ctx, id)
 	}
-	m.mu.Lock(); defer m.mu.Unlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	cur, ok := m.byID[id]
 	if !ok {
 		return nil // idempotent
@@ -128,7 +133,8 @@ func (m *MockUserRepository) List(ctx context.Context, req model.ListUsersReques
 	if m.ListFn != nil {
 		return m.ListFn(ctx, req)
 	}
-	m.mu.Lock(); defer m.mu.Unlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	out := make([]model.User, 0, len(m.byID))
 	for _, u := range m.byID {
 		if req.StatusFilter != "" {

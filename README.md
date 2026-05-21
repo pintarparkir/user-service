@@ -4,7 +4,7 @@
 
 **Author:** Farid Triwicaksono · **Submitted:** 2026-04-27  
 **Stack (sesuai standard internal — see [B.3 Library doc](docs/architecture/library-decision.md)):**  
-Go 1.22 · gRPC/HTTP/2 · **sqlx** + PostgreSQL 16 · **go-redis v8** · **RabbitMQ (amqp091-go)** · **Gin** (gateway) · **Zap + Lumberjack** · **godotenv + caarlos0/env** · **gocron** (scheduler) · OpenTelemetry · Cobra (CLI)
+Go 1.25 · gRPC/HTTP/2 · **sqlx** + PostgreSQL 16 · **go-redis v8** · **RabbitMQ (amqp091-go)** · **Gin** (gateway) · **Zap + Lumberjack** · **godotenv + caarlos0/env** · **gocron** (scheduler) · OpenTelemetry · Cobra (CLI)
 
 **Project layout** mengikuti boilerplate company (`cmd/ · internal/<domain>/{model,usecase,repository,handler}/ · pkg/`).
 
@@ -90,7 +90,7 @@ ParkirPintar adalah **mini-app super-app** untuk reservasi parkir di **satu loka
 | **Cheap MVP** | Cloud Run / ECS Fargate (scale-to-zero), Postgres `db-f1-micro`, Redis Upstash free. |
 | **Strong consistency on spot** | PG `EXCLUDE` constraint + Redis lock (defense in depth — see ADR-004). |
 | **gRPC required** (soal) | Internal s2s via gRPC; gateway translate REST→gRPC. |
-| **Required Go** | Semua service Go 1.22. |
+| **Required Go** | Semua service Go 1.25. |
 | **Mengikuti library standard internal** (B.3) | sqlx, gin, zap, godotenv, RabbitMQ, gocron, cobra. |
 
 ---
@@ -414,7 +414,7 @@ parkirpintar/
 ## 13. How to Run
 
 ### 13.1 Prereqs
-Docker 24+ · Docker Compose v2 · Go 1.22+ (untuk run tests local) · `buf` CLI (jika regenerate proto).
+Docker 24+ · Docker Compose v2 · Go 1.25+ (untuk run tests local) · `buf` CLI (jika regenerate proto).
 
 ### 13.2 Quickstart
 ```bash

@@ -1,6 +1,6 @@
 # Multi-stage Dockerfile — one image per service via SERVICE build-arg
 # Build: docker build --build-arg SERVICE=reservation -t parkirpintar/reservation .
-ARG GO_VERSION=1.22
+ARG GO_VERSION=1.25
 
 FROM golang:${GO_VERSION}-alpine AS builder
 ARG SERVICE
