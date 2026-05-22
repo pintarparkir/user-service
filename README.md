@@ -78,6 +78,8 @@ See [`../docs/architecture/erd/01-user-service.md`](../docs/architecture/erd/01-
 - Unique constraints (phone_e164, external_user_id, nopol per driver)
 - Critical indexes
 
+![ParkirPintar ERD](ERD.jpg)
+
 ## API Reference
 
 ### REST Endpoints (mini-app, all require `Authorization: Bearer <jwt>`)
@@ -158,8 +160,8 @@ git clone <repo> && cd <repo>
 cd user-service
 cp configs/.env.example configs/.env
 
-# 2. Start shared infra (from repo root)
-cd ../infra && docker compose up -d
+# 2. Start shared infra (see https://github.com/pintarparkir/infra)
+cd ../infra && podman compose up -d
 
 # 3. Run migrations
 cd ../user-service
@@ -272,6 +274,7 @@ redis-cli DEL user:profile:<user_id>
 ## Related Documentation
 
 - **Architecture Overview:** [`../docs/README.md`](../docs/README.md)
+- **Shared Infra Docs:** [`infra`](https://github.com/pintarparkir/infra)
 - **API Documentation:** [`../docs/api-documentation/00-overview.md`](../docs/api-documentation/00-overview.md)
 - **Implementation Backlog:** [`../docs/implementation-todo/00-backlog.md`](../docs/implementation-todo/00-backlog.md)
 
