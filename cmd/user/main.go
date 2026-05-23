@@ -18,6 +18,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	"github.com/farid/user-service/internal/user/handler/grpc"
 	userhttp "github.com/farid/user-service/internal/user/handler/http"
@@ -48,6 +49,9 @@ func main() {
 			fmt.Fprintln(os.Stderr, "otel shutdown:", err)
 		}
 	}()
+	if err := otel.RegisterRuntimeMetrics(); err != nil {
+		logger.Error(ctx, "failed to register runtime metrics", map[string]interface{}{logger.ErrorKey: err.Error()})
+	}
 
 	// ── Infra ────────────────────────────────────────────────────────────────
 	db, err := pgdb.NewPostgresDB(pgdb.PostgresDsn{
@@ -101,6 +105,7 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	router := gin.New()
+	router.Use(otelgin.Middleware(cfg.AppName))
 	router.Use(gin.Recovery(), cors.Default())
 	router.GET("/healthz", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) })
 	userhttp.RegisterUserHandler(router.Group("/v1"), uc, cfg.SuperAppJWTPubKey)
