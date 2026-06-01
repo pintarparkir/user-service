@@ -1,3 +1,4 @@
+// Package otel provides OpenTelemetry tracing and metrics setup.
 package otel
 
 import (

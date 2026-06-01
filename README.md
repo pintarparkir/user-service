@@ -271,6 +271,76 @@ redis-cli DEL user:profile:<user_id>
 - **SQL:** All queries parameterized (sqlx prevents injection).
 - **Optimistic locking:** `version` column prevents lost updates on concurrent profile edits.
 
+## Business Flow Logic
+
+### User Service in End-to-End Flow
+
+User-service adalah **identity provider** untuk seluruh sistem ParkirPintar. Service ini tidak memiliki flow bisnis mandiri, tetapi dipanggil oleh service lain untuk:
+
+1. **Lazy Registration** — Gateway memanggil `UpsertDriver` saat driver pertama kali akses mini-app
+2. **MSISDN Resolution** — Notification-service memanggil `GetUserById` untuk resolve phone number sebelum kirim SMS
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Gateway as Mini-App Gateway
+    participant UserSvc as User Service
+    participant Redis as Redis Cache
+    participant DB as Postgres (pgcrypto)
+    
+    Note over Gateway,DB: Flow 1: Lazy Registration (First Access)
+    
+    Gateway->>UserSvc: gRPC UpsertDriver(external_user_id, phone, name)
+    activate UserSvc
+    
+    UserSvc->>DB: BEGIN
+    UserSvc->>DB: SELECT * FROM user_profile WHERE external_user_id = ?
+    
+    alt User exists
+        DB-->>UserSvc: Return existing user
+        UserSvc->>DB: COMMIT
+    else User not exists
+        UserSvc->>UserSvc: Encrypt phone with pgcrypto
+        UserSvc->>DB: INSERT INTO user_profile (external_user_id, phone_enc, status=ACTIVE)
+        UserSvc->>DB: COMMIT
+    end
+    
+    UserSvc->>Redis: SET user:profile:{id} TTL=5min
+    UserSvc-->>Gateway: User profile
+    deactivate UserSvc
+    
+    Note over Gateway,DB: Flow 2: MSISDN Resolution (SMS Dispatch)
+    
+    participant NotifSvc as Notification Service
+    
+    NotifSvc->>UserSvc: gRPC GetUserById(driver_id)
+    activate UserSvc
+    
+    UserSvc->>Redis: GET user:profile:{driver_id}
+    
+    alt Cache hit
+        Redis-->>UserSvc: Cached profile
+        UserSvc-->>NotifSvc: phone_e164
+    else Cache miss
+        UserSvc->>DB: SELECT phone_enc FROM user_profile WHERE id = ?
+        UserSvc->>UserSvc: Decrypt phone with pgcrypto
+        UserSvc->>Redis: SET user:profile:{id} TTL=5min
+        UserSvc-->>NotifSvc: phone_e164
+    end
+    
+    deactivate UserSvc
+```
+
+### Key Responsibilities in Cross-Service Flows
+
+| Flow | Role | Trigger |
+|------|------|---------|
+| Reservation Create | Validate driver exists | Gateway JWT verification |
+| SMS Notification | Provide MSISDN | Notification-service gRPC call |
+| Vehicle Registration | Store driver's vehicles | Mini-app REST POST /v1/me/vehicles |
+
+---
+
 ## Related Documentation
 
 - **Architecture Overview:** [`../docs/README.md`](../docs/README.md)
