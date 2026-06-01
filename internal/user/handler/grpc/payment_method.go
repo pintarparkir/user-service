@@ -1,6 +1,8 @@
 package grpc
 
 import (
+	"context"
+
 	userv1 "github.com/farid/user-service/api/proto/user/v1"
 	"github.com/farid/user-service/internal/user/usecase"
 )

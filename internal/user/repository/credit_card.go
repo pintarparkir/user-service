@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"context"
+
 	"github.com/farid/user-service/internal/user/model"
 )
 
