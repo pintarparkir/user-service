@@ -11,9 +11,9 @@ import (
 
 // CreditCardHandler handles REST endpoints for credit card management.
 type CreditCardHandler struct {
-	addUC       *usecase.AddCreditCardUsecase
+	addUC        *usecase.AddCreditCardUsecase
 	setDefaultUC *usecase.SetDefaultCreditCardUsecase
-	getMethodUC *usecase.GetDefaultPaymentMethodUsecase
+	getMethodUC  *usecase.GetDefaultPaymentMethodUsecase
 }
 
 // NewCreditCardHandler creates a new CreditCardHandler.
@@ -27,11 +27,11 @@ func NewCreditCardHandler(addUC *usecase.AddCreditCardUsecase, setDefaultUC *use
 
 // AddRequest represents a request to add a new credit card.
 type AddRequest struct {
-	CardNumber string `json:"card_number" binding:"required"`
-	ExpMonth   int    `json:"exp_month" binding:"required,min=1,max=12"`
-	ExpYear    int    `json:"exp_year" binding:"required"`
-	CVV        string `json:"cvv" binding:"required"`
-	MakeDefault bool  `json:"make_default"`
+	CardNumber  string `json:"card_number" binding:"required"`
+	ExpMonth    int    `json:"exp_month" binding:"required,min=1,max=12"`
+	ExpYear     int    `json:"exp_year" binding:"required"`
+	CVV         string `json:"cvv" binding:"required"`
+	MakeDefault bool   `json:"make_default"`
 }
 
 // CardResponse represents the response after adding a credit card.
@@ -49,9 +49,9 @@ type SetDefaultRequest struct {
 
 // PaymentMethodResponse represents the default payment method.
 type PaymentMethodResponse struct {
-	Type    string `json:"type"`      // "CC", "QRIS", "NONE"
-	Last4   string `json:"last4"`
-	Brand   string `json:"brand"`
+	Type  string `json:"type"` // "CC", "QRIS", "NONE"
+	Last4 string `json:"last4"`
+	Brand string `json:"brand"`
 }
 
 // Add handles POST /v1/users/:user_id/credit-cards

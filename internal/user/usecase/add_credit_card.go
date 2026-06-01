@@ -9,11 +9,11 @@ import (
 )
 
 type AddCreditCardRequest struct {
-	UserID     string
-	CardNumber string
-	ExpMonth   int
-	ExpYear    int
-	CVV        string
+	UserID      string
+	CardNumber  string
+	ExpMonth    int
+	ExpYear     int
+	CVV         string
 	MakeDefault bool
 }
 
