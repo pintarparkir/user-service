@@ -100,17 +100,6 @@ message ListVehiclesResponse { repeated Vehicle vehicles = 1; }
 
 // ── Payment Method RPCs ──────────────────────────────────────────────────────
 
-message PaymentMethod {
-  string type = 1;    // CC, QRIS, NONE
-  string cc_token = 2;
-  string last4 = 3;
-  string brand = 4;
-}
-
-message GetDefaultPaymentMethodRequest { string user_id = 1; }
-
-// ── Payment Method RPCs ──────────────────────────────────────────────────────
-
 message PaymentMethodResponse {
   string type = 1;    // "CC", "QRIS", "NONE"
   string last4 = 2;   // Last 4 digits of card number (if CC)

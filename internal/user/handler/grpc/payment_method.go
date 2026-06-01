@@ -2,7 +2,7 @@ package grpc
 
 import (
 	"context"
-	pb "github.com/farid/user-service/pkg/pb/user/v1"
+	userv1 "github.com/farid/user-service/api/proto/user/v1"
 	"github.com/farid/user-service/internal/user/usecase"
 )
 
