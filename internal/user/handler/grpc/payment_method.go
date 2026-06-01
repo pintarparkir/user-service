@@ -14,10 +14,15 @@ func NewPaymentMethodHandler(uc *usecase.GetDefaultPaymentMethodUsecase) *Paymen
 	return &PaymentMethodHandler{uc: uc}
 }
 
-func (h *PaymentMethodHandler) GetDefaultPaymentMethod(ctx context.Context, req *pb.GetDefaultPaymentMethodRequest) (*pb.PaymentMethod, error) {
+func (h *PaymentMethodHandler) GetDefaultPaymentMethod(ctx context.Context, req *userv1.GetDefaultPaymentMethodRequest) (*userv1.PaymentMethodResponse, error) {
 	pm, err := h.uc.Execute(ctx, req.UserId)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.PaymentMethod{Type: pm.Type, CcToken: pm.CCToken, Last4: pm.Last4, Brand: pm.Brand}, nil
+
+	return &userv1.PaymentMethodResponse{
+		Type:  pm.Type,
+		Last4: pm.Last4,
+		Brand: pm.Brand,
+	}, nil
 }
