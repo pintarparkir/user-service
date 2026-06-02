@@ -59,11 +59,13 @@ func main() {
 		MaxOpen: cfg.DbMaxOpen, MaxIdle: cfg.DbMaxIdle,
 	})
 	if err != nil {
-		logger.Fatal(ctx, "postgres init failed", map[string]interface{}{logger.ErrorKey: err.Error()})
+		logger.Error(ctx, "postgres init failed (service will start but DB calls will fail)", map[string]interface{}{logger.ErrorKey: err.Error()})
 	}
 	defer func() {
-		if closeErr := db.Close(); closeErr != nil {
-			logger.Error(ctx, "db.Close failed", map[string]interface{}{logger.ErrorKey: closeErr.Error()})
+		if db != nil {
+			if closeErr := db.Close(); closeErr != nil {
+				logger.Error(ctx, "db.Close failed", map[string]interface{}{logger.ErrorKey: closeErr.Error()})
+			}
 		}
 	}()
 
@@ -78,6 +80,8 @@ func main() {
 	uc := useruc.NewUserUsecase(repo, vehicleRepo, cache)
 
 	// ── gRPC server ──────────────────────────────────────────────────────────
+	// In Cloud Run, only one port is exposed (APP_PORT for HTTP). gRPC is
+	// only useful in VPC-internal calls or local dev. Skip if port bind fails.
 	grpcSrv, err := grpcserver.NewGrpcServer(cfg.GrpcPort, grpcserver.Options{
 		IdempotencyStore: idempotency.NewPostgresStore(db),
 		IdempotentMethods: []string{
@@ -88,15 +92,15 @@ func main() {
 		},
 	})
 	if err != nil {
-		logger.Fatal(ctx, "grpc server init failed", map[string]interface{}{logger.ErrorKey: err.Error()})
+		logger.Warn(ctx, "grpc server init failed (continuing HTTP-only)", map[string]interface{}{logger.ErrorKey: err.Error()})
+	} else {
+		grpc.RegisterUserHandler(grpcSrv.Server, uc)
+		go func() {
+			if err := grpcSrv.Start(); err != nil {
+				logger.Error(ctx, "grpc serve failed", map[string]interface{}{logger.ErrorKey: err.Error()})
+			}
+		}()
 	}
-	grpc.RegisterUserHandler(grpcSrv.Server, uc)
-
-	go func() {
-		if err := grpcSrv.Start(); err != nil {
-			logger.Fatal(ctx, "grpc serve failed", map[string]interface{}{logger.ErrorKey: err.Error()})
-		}
-	}()
 
 	// ── HTTP server (mini-app REST interface) ────────────────────────────────
 	if cfg.AppEnv == "local" {
@@ -131,7 +135,9 @@ func main() {
 	if err := httpSrv.Shutdown(shutCtx); err != nil {
 		logger.Error(context.Background(), "http shutdown error", map[string]interface{}{logger.ErrorKey: err.Error()})
 	}
-	grpcSrv.Shutdown()
+	if grpcSrv != nil {
+		grpcSrv.Shutdown()
+	}
 	if err := logger.Sync(); err != nil {
 		fmt.Fprintln(os.Stderr, "logger sync:", err)
 	}
