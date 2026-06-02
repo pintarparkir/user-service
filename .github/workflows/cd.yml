@@ -119,7 +119,7 @@ jobs:
             --format='value(status.url)')
           echo "Service URL: $URL"
           for i in 1 2 3 4 5; do
-            if curl -fsS --max-time 10 "$URL/healthz"; then
+            if curl -fsS --max-time 10 "$URL/health"; then
               echo "✓ smoke test passed"
               exit 0
             fi

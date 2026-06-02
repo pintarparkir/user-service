@@ -61,7 +61,7 @@ func main() {
 	router.Use(gin.Recovery(), cors.Default())
 
 	var ready atomic.Bool
-	router.GET("/healthz", func(c *gin.Context) {
+	router.GET("/health", func(c *gin.Context) {
 		if ready.Load() {
 			c.JSON(http.StatusOK, gin.H{"status": "ok"})
 		} else {
