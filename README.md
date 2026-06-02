@@ -1,10 +1,10 @@
 # user-service
 
-[![Security](https://sonarcloud.io/api/project_badges/measure?project=pintarparkir_user-service&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=pintarparkir_user-service)
-[![Reliability](https://sonarcloud.io/api/project_badges/measure?project=pintarparkir_user-service&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=pintarparkir_user-service)
-[![Maintainability](https://sonarcloud.io/api/project_badges/measure?project=pintarparkir_user-service&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=pintarparkir_user-service)
-[![Duplications](https://sonarcloud.io/api/project_badges/measure?project=pintarparkir_user-service&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=pintarparkir_user-service)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=pintarparkir_user-service&metric=coverage)](https://sonarcloud.io/summary/new_code?id=pintarparkir_user-service)
+[![Security](https://sonarcloud.io/api/project_badges/measure?project=pintarparkir_user-service&metric=security_rating&token=66ea93348f4a130c2f9af61ca6938a8d5b9b4f9a)](https://sonarcloud.io/summary/new_code?id=pintarparkir_user-service)
+[![Reliability](https://sonarcloud.io/api/project_badges/measure?project=pintarparkir_user-service&metric=reliability_rating&token=66ea93348f4a130c2f9af61ca6938a8d5b9b4f9a)](https://sonarcloud.io/summary/new_code?id=pintarparkir_user-service)
+[![Maintainability](https://sonarcloud.io/api/project_badges/measure?project=pintarparkir_user-service&metric=sqale_rating&token=66ea93348f4a130c2f9af61ca6938a8d5b9b4f9a)](https://sonarcloud.io/summary/new_code?id=pintarparkir_user-service)
+[![Duplications](https://sonarcloud.io/api/project_badges/measure?project=pintarparkir_user-service&metric=duplicated_lines_density&token=66ea93348f4a130c2f9af61ca6938a8d5b9b4f9a)](https://sonarcloud.io/summary/new_code?id=pintarparkir_user-service)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=pintarparkir_user-service&metric=coverage&token=66ea93348f4a130c2f9af61ca6938a8d5b9b4f9a)](https://sonarcloud.io/summary/new_code?id=pintarparkir_user-service)
 
 **Cloud Run:** `https://user-service-725nddkmwq-as.a.run.app`
 
