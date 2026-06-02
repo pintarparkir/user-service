@@ -22,7 +22,7 @@ type PostgresDsn struct {
 // Always pings the DB at boot; returns error so callers can fail-fast.
 func NewPostgresDB(dsn PostgresDsn) (*sqlx.DB, error) {
 	connStr := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable connect_timeout=5",
 		dsn.Host, dsn.Port, dsn.User, dsn.Password, dsn.Db,
 	)
 

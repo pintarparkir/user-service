@@ -3,8 +3,8 @@
 // Runs BOTH a gRPC server (internal s2s on :9094) and a REST HTTP server (mini app on :8080).
 // Both are wired to the same usecase so business rules stay consistent across protocols.
 //
-// Wiring order: configs → logger → otel → postgres + redis → repository →
-// usecase → gRPC server (with idempotency interceptor) → HTTP server → graceful shutdown.
+// Wiring order: configs → logger → otel → HTTP healthz first → postgres + redis →
+// repository → usecase → register routes → gRPC server → graceful shutdown.
 package main
 
 import (
@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -49,23 +50,48 @@ func main() {
 			fmt.Fprintln(os.Stderr, "otel shutdown:", err)
 		}
 	}()
-	if err := otel.RegisterRuntimeMetrics(); err != nil {
-		logger.Error(ctx, "failed to register runtime metrics", map[string]interface{}{logger.ErrorKey: err.Error()})
-	}
+	_ = otel.RegisterRuntimeMetrics()
 
-	// ── Infra ────────────────────────────────────────────────────────────────
+	// ── HTTP server (start ASAP so Cloud Run health checks pass) ─────────────
+	if cfg.AppEnv != "local" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+	router := gin.New()
+	router.Use(otelgin.Middleware(cfg.AppName))
+	router.Use(gin.Recovery(), cors.Default())
+
+	var ready atomic.Bool
+	router.GET("/healthz", func(c *gin.Context) {
+		if ready.Load() {
+			c.JSON(http.StatusOK, gin.H{"status": "ok"})
+		} else {
+			c.JSON(http.StatusOK, gin.H{"status": "starting"})
+		}
+	})
+
+	httpSrv := &http.Server{
+		Addr:              ":" + cfg.AppPort,
+		Handler:           router,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+	go func() {
+		logger.Info(ctx, fmt.Sprintf("user HTTP listening on :%s", cfg.AppPort), nil)
+		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal(ctx, "http listen failed", map[string]interface{}{logger.ErrorKey: err.Error()})
+		}
+	}()
+
+	// ── Infra (after HTTP is serving) ────────────────────────────────────────
 	db, err := pgdb.NewPostgresDB(pgdb.PostgresDsn{
 		Host: cfg.DbHost, Port: cfg.DbPort, User: cfg.DbUsername, Password: cfg.DbPassword, Db: cfg.DbName,
 		MaxOpen: cfg.DbMaxOpen, MaxIdle: cfg.DbMaxIdle,
 	})
 	if err != nil {
-		logger.Error(ctx, "postgres init failed (service will start but DB calls will fail)", map[string]interface{}{logger.ErrorKey: err.Error()})
+		logger.Error(ctx, "postgres init failed (DB calls will fail)", map[string]interface{}{logger.ErrorKey: err.Error()})
 	}
 	defer func() {
 		if db != nil {
-			if closeErr := db.Close(); closeErr != nil {
-				logger.Error(ctx, "db.Close failed", map[string]interface{}{logger.ErrorKey: closeErr.Error()})
-			}
+			_ = db.Close()
 		}
 	}()
 
@@ -79,10 +105,13 @@ func main() {
 	vehicleRepo := userpg.NewVehicleRepository(db)
 	uc := useruc.NewUserUsecase(repo, vehicleRepo, cache)
 
+	// Register routes (after usecase is ready)
+	userhttp.RegisterUserHandler(router.Group("/v1"), uc, cfg.SuperAppJWTPubKey)
+	ready.Store(true)
+
 	// ── gRPC server ──────────────────────────────────────────────────────────
-	// In Cloud Run, only one port is exposed (APP_PORT for HTTP). gRPC is
-	// only useful in VPC-internal calls or local dev. Skip if port bind fails.
-	grpcSrv, err := grpcserver.NewGrpcServer(cfg.GrpcPort, grpcserver.Options{
+	var grpcSrv *grpcserver.GrpcServer
+	grpcSrv, err = grpcserver.NewGrpcServer(cfg.GrpcPort, grpcserver.Options{
 		IdempotencyStore: idempotency.NewPostgresStore(db),
 		IdempotentMethods: []string{
 			model.ScopeCreateUser,
@@ -92,7 +121,7 @@ func main() {
 		},
 	})
 	if err != nil {
-		logger.Warn(ctx, "grpc server init failed (continuing HTTP-only)", map[string]interface{}{logger.ErrorKey: err.Error()})
+		logger.Warn(ctx, "grpc server init failed (HTTP-only mode)", map[string]interface{}{logger.ErrorKey: err.Error()})
 	} else {
 		grpc.RegisterUserHandler(grpcSrv.Server, uc)
 		go func() {
@@ -102,29 +131,7 @@ func main() {
 		}()
 	}
 
-	// ── HTTP server (mini-app REST interface) ────────────────────────────────
-	if cfg.AppEnv == "local" {
-		gin.SetMode(gin.DebugMode)
-	} else {
-		gin.SetMode(gin.ReleaseMode)
-	}
-	router := gin.New()
-	router.Use(otelgin.Middleware(cfg.AppName))
-	router.Use(gin.Recovery(), cors.Default())
-	router.GET("/healthz", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) })
-	userhttp.RegisterUserHandler(router.Group("/v1"), uc, cfg.SuperAppJWTPubKey)
-
-	httpSrv := &http.Server{
-		Addr:              ":" + cfg.AppPort,
-		Handler:           router,
-		ReadHeaderTimeout: 5 * time.Second,
-	}
-	go func() {
-		logger.Info(ctx, fmt.Sprintf("user HTTP listening on :%s", cfg.AppPort), nil)
-		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal(ctx, "http listen failed", map[string]interface{}{logger.ErrorKey: err.Error()})
-		}
-	}()
+	logger.Info(ctx, "user-service fully initialized", nil)
 
 	// ── Graceful shutdown ────────────────────────────────────────────────────
 	<-ctx.Done()
