@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	apperror "github.com/farid/user-service/pkg/error"
 
@@ -31,17 +30,7 @@ func (r *userRepository) Update(ctx context.Context, u model.User, expectedVersi
 		          COALESCE(pgp_sym_decrypt(email_enc,      $5), '') AS email,
 		          status, version, created_at, updated_at`
 
-	var row struct {
-		ID             string    `db:"id"`
-		ExternalUserID string    `db:"external_user_id"`
-		FullName       string    `db:"full_name"`
-		PhoneE164      string    `db:"phone_e164"`
-		Email          string    `db:"email"`
-		Status         string    `db:"status"`
-		Version        int       `db:"version"`
-		CreatedAt      time.Time `db:"created_at"`
-		UpdatedAt      time.Time `db:"updated_at"`
-	}
+	var row userRow
 	err := r.db.QueryRowxContext(ctx, q,
 		u.FullName, u.PhoneE164, u.Email, u.ID, r.pgKey, expectedVersion,
 	).StructScan(&row)
@@ -51,10 +40,5 @@ func (r *userRepository) Update(ctx context.Context, u model.User, expectedVersi
 	if err != nil {
 		return model.User{}, fmt.Errorf("update user: %w", err)
 	}
-	return model.User{
-		ID: row.ID, ExternalUserID: row.ExternalUserID, FullName: row.FullName,
-		PhoneE164: row.PhoneE164, Email: row.Email,
-		Status: model.UserStatus(row.Status), Version: row.Version,
-		CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
-	}, nil
+	return row.toModel(), nil
 }

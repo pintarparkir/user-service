@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/farid/user-service/internal/user/model"
 )
@@ -48,26 +47,11 @@ func (r *userRepository) List(ctx context.Context, req model.ListUsersRequest) (
 
 	users := make([]model.User, 0, limit)
 	for rows.Next() {
-		var row struct {
-			ID             string    `db:"id"`
-			ExternalUserID string    `db:"external_user_id"`
-			FullName       string    `db:"full_name"`
-			PhoneE164      string    `db:"phone_e164"`
-			Email          string    `db:"email"`
-			Status         string    `db:"status"`
-			Version        int       `db:"version"`
-			CreatedAt      time.Time `db:"created_at"`
-			UpdatedAt      time.Time `db:"updated_at"`
-		}
+		var row userRow
 		if err := rows.StructScan(&row); err != nil {
 			return nil, 0, err
 		}
-		users = append(users, model.User{
-			ID: row.ID, ExternalUserID: row.ExternalUserID, FullName: row.FullName,
-			PhoneE164: row.PhoneE164, Email: row.Email,
-			Status: model.UserStatus(row.Status), Version: row.Version,
-			CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
-		})
+		users = append(users, row.toModel())
 	}
 
 	// Total (unfiltered by limit/offset, but respects status filter).

@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	apperror "github.com/farid/user-service/pkg/error"
 
@@ -26,27 +25,13 @@ func (r *userRepository) GetByExternalID(ctx context.Context, externalUserID str
 
 // scanOne factors the SELECT-and-decrypt boilerplate.
 func (r *userRepository) scanOne(ctx context.Context, q string, args ...interface{}) (*model.User, error) {
-	var row struct {
-		ID             string    `db:"id"`
-		ExternalUserID string    `db:"external_user_id"`
-		FullName       string    `db:"full_name"`
-		PhoneE164      string    `db:"phone_e164"`
-		Email          string    `db:"email"`
-		Status         string    `db:"status"`
-		Version        int       `db:"version"`
-		CreatedAt      time.Time `db:"created_at"`
-		UpdatedAt      time.Time `db:"updated_at"`
-	}
+	var row userRow
 	if err := r.db.QueryRowxContext(ctx, q, args...).StructScan(&row); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, apperror.ErrNotFound
 		}
 		return nil, err
 	}
-	return &model.User{
-		ID: row.ID, ExternalUserID: row.ExternalUserID, FullName: row.FullName,
-		PhoneE164: row.PhoneE164, Email: row.Email,
-		Status: model.UserStatus(row.Status), Version: row.Version,
-		CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
-	}, nil
+	out := row.toModel()
+	return &out, nil
 }

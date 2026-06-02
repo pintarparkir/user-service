@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/jmoiron/sqlx"
 
@@ -31,27 +30,13 @@ func (r *vehicleRepository) Register(ctx context.Context, v model.Vehicle) (mode
 			    is_default   = EXCLUDED.is_default
 		RETURNING id, driver_id, nopol, vehicle_type, is_default, created_at`
 
-	var row struct {
-		ID          string    `db:"id"`
-		DriverID    string    `db:"driver_id"`
-		Nopol       string    `db:"nopol"`
-		VehicleType string    `db:"vehicle_type"`
-		IsDefault   bool      `db:"is_default"`
-		CreatedAt   time.Time `db:"created_at"`
-	}
+	var row vehicleRow
 	if err := r.db.QueryRowxContext(ctx, q,
 		v.DriverID, v.Nopol, string(v.VehicleType), v.IsDefault,
 	).StructScan(&row); err != nil {
 		return model.Vehicle{}, fmt.Errorf("register vehicle: %w", err)
 	}
-	return model.Vehicle{
-		ID:          row.ID,
-		DriverID:    row.DriverID,
-		Nopol:       row.Nopol,
-		VehicleType: model.VehicleType(row.VehicleType),
-		IsDefault:   row.IsDefault,
-		CreatedAt:   row.CreatedAt,
-	}, nil
+	return row.toModel(), nil
 }
 
 // ListByDriverID returns all vehicles for a driver, default-first then chronological.
@@ -70,25 +55,11 @@ func (r *vehicleRepository) ListByDriverID(ctx context.Context, driverID string)
 
 	var vehicles []model.Vehicle
 	for rows.Next() {
-		var row struct {
-			ID          string    `db:"id"`
-			DriverID    string    `db:"driver_id"`
-			Nopol       string    `db:"nopol"`
-			VehicleType string    `db:"vehicle_type"`
-			IsDefault   bool      `db:"is_default"`
-			CreatedAt   time.Time `db:"created_at"`
-		}
+		var row vehicleRow
 		if err := rows.StructScan(&row); err != nil {
 			return nil, fmt.Errorf("scan vehicle row: %w", err)
 		}
-		vehicles = append(vehicles, model.Vehicle{
-			ID:          row.ID,
-			DriverID:    row.DriverID,
-			Nopol:       row.Nopol,
-			VehicleType: model.VehicleType(row.VehicleType),
-			IsDefault:   row.IsDefault,
-			CreatedAt:   row.CreatedAt,
-		})
+		vehicles = append(vehicles, row.toModel())
 	}
 	return vehicles, rows.Err()
 }
