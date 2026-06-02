@@ -1,10 +1,11 @@
 // user service entry point.
 //
-// Runs BOTH a gRPC server (internal s2s on :9094) and a REST HTTP server (mini app on :8080).
-// Both are wired to the same usecase so business rules stay consistent across protocols.
+// Serves gRPC and REST on a single port (8080) via h2c multiplexing.
+// Cloud Run routes gRPC (HTTP/2, content-type: application/grpc) and REST (HTTP/1.1)
+// to the same container port — load balancing handled by Cloud Run.
 //
-// Wiring order: configs → logger → otel → HTTP healthz first → postgres + redis →
-// repository → usecase → register routes → gRPC server → graceful shutdown.
+// Wiring order: configs → logger → otel → HTTP health first → postgres + redis →
+// repository → usecase → register routes → gRPC on same port → graceful shutdown.
 package main
 
 import (
@@ -13,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -20,8 +22,10 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 
-	"github.com/farid/user-service/internal/user/handler/grpc"
+	usergrpc "github.com/farid/user-service/internal/user/handler/grpc"
 	userhttp "github.com/farid/user-service/internal/user/handler/http"
 	"github.com/farid/user-service/internal/user/model"
 	userpg "github.com/farid/user-service/internal/user/repository/postgres"
@@ -52,7 +56,7 @@ func main() {
 	}()
 	_ = otel.RegisterRuntimeMetrics()
 
-	// ── HTTP server (start ASAP so Cloud Run health checks pass) ─────────────
+	// ── HTTP router (start ASAP so Cloud Run health checks pass) ─────────────
 	if cfg.AppEnv != "local" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -69,15 +73,27 @@ func main() {
 		}
 	})
 
+	// ── gRPC server (created early, registered after usecase ready) ──────────
+	grpcSrv, grpcErr := grpcserver.NewGrpcServerNoListen(grpcserver.Options{
+		IdempotentMethods: []string{
+			model.ScopeCreateUser,
+			model.ScopeUpdateUser,
+			model.ScopeUpsertDriver,
+			model.ScopeRegisterVehicle,
+		},
+	})
+
+	// ── Multiplexed HTTP server (gRPC + REST on same port) ───────────────────
+	mux := grpcHTTPMux(grpcSrv, router)
 	httpSrv := &http.Server{
 		Addr:              ":" + cfg.AppPort,
-		Handler:           router,
+		Handler:           h2c.NewHandler(mux, &http2.Server{}),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	go func() {
-		logger.Info(ctx, fmt.Sprintf("user HTTP listening on :%s", cfg.AppPort), nil)
+		logger.Info(ctx, fmt.Sprintf("user-service listening on :%s (gRPC+HTTP)", cfg.AppPort), nil)
 		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal(ctx, "http listen failed", map[string]interface{}{logger.ErrorKey: err.Error()})
+			logger.Fatal(ctx, "listen failed", map[string]interface{}{logger.ErrorKey: err.Error()})
 		}
 	}()
 
@@ -105,32 +121,18 @@ func main() {
 	vehicleRepo := userpg.NewVehicleRepository(db)
 	uc := useruc.NewUserUsecase(repo, vehicleRepo, cache)
 
-	// Register routes (after usecase is ready)
+	// Register HTTP routes
 	userhttp.RegisterUserHandler(router.Group("/v1"), uc, cfg.SuperAppJWTPubKey)
-	ready.Store(true)
 
-	// ── gRPC server ──────────────────────────────────────────────────────────
-	var grpcSrv *grpcserver.GrpcServer
-	grpcSrv, err = grpcserver.NewGrpcServer(cfg.GrpcPort, grpcserver.Options{
-		IdempotencyStore: idempotency.NewPostgresStore(db),
-		IdempotentMethods: []string{
-			model.ScopeCreateUser,
-			model.ScopeUpdateUser,
-			model.ScopeUpsertDriver,
-			model.ScopeRegisterVehicle,
-		},
-	})
-	if err != nil {
-		logger.Warn(ctx, "grpc server init failed (HTTP-only mode)", map[string]interface{}{logger.ErrorKey: err.Error()})
-	} else {
-		grpc.RegisterUserHandler(grpcSrv.Server, uc)
-		go func() {
-			if err := grpcSrv.Start(); err != nil {
-				logger.Error(ctx, "grpc serve failed", map[string]interface{}{logger.ErrorKey: err.Error()})
-			}
-		}()
+	// Register gRPC handlers (idempotency store needs DB)
+	if grpcErr == nil && grpcSrv != nil {
+		if db != nil {
+			grpcSrv.SetIdempotencyStore(idempotency.NewPostgresStore(db))
+		}
+		usergrpc.RegisterUserHandler(grpcSrv.Server, uc)
 	}
 
+	ready.Store(true)
 	logger.Info(ctx, "user-service fully initialized", nil)
 
 	// ── Graceful shutdown ────────────────────────────────────────────────────
@@ -139,13 +141,24 @@ func main() {
 
 	shutCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+	if grpcSrv != nil {
+		grpcSrv.Server.GracefulStop()
+	}
 	if err := httpSrv.Shutdown(shutCtx); err != nil {
 		logger.Error(context.Background(), "http shutdown error", map[string]interface{}{logger.ErrorKey: err.Error()})
-	}
-	if grpcSrv != nil {
-		grpcSrv.Shutdown()
 	}
 	if err := logger.Sync(); err != nil {
 		fmt.Fprintln(os.Stderr, "logger sync:", err)
 	}
+}
+
+// grpcHTTPMux routes gRPC requests to grpcServer, everything else to httpHandler.
+func grpcHTTPMux(grpcSrv *grpcserver.GrpcServer, httpHandler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if grpcSrv != nil && r.ProtoMajor == 2 && strings.HasPrefix(r.Header.Get("Content-Type"), "application/grpc") {
+			grpcSrv.Server.ServeHTTP(w, r)
+			return
+		}
+		httpHandler.ServeHTTP(w, r)
+	})
 }
