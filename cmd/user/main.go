@@ -22,8 +22,6 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 
 	usergrpc "github.com/farid/user-service/internal/user/handler/grpc"
 	userhttp "github.com/farid/user-service/internal/user/handler/http"
@@ -84,10 +82,13 @@ func main() {
 	})
 
 	// ── Multiplexed HTTP server (gRPC + REST on same port) ───────────────────
-	mux := grpcHTTPMux(grpcSrv, router)
+	var protos http.Protocols
+	protos.SetHTTP1(true)
+	protos.SetUnencryptedHTTP2(true)
 	httpSrv := &http.Server{
 		Addr:              ":" + cfg.AppPort,
-		Handler:           h2c.NewHandler(mux, &http2.Server{}),
+		Handler:           grpcHTTPMux(grpcSrv, router),
+		Protocols:         &protos,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	go func() {
