@@ -9,6 +9,7 @@ env:
   GO_VERSION: '1.25.10'
   GCP_PROJECT_ID: pintarparkir
   GCP_REGION: asia-southeast1
+  AR_REGION: asia-southeast2
   SERVICE_NAME: user-service
   ARTIFACT_REGISTRY_REPO: parkirpintar
 
@@ -26,7 +27,7 @@ jobs:
 
       - id: image
         run: |
-          IMAGE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+          IMAGE="${{ env.AR_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
           echo "uri=$IMAGE" >> "$GITHUB_OUTPUT"
 
       - uses: google-github-actions/auth@v2
@@ -37,7 +38,7 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v2
 
       - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+        run: gcloud auth configure-docker ${{ env.AR_REGION }}-docker.pkg.dev --quiet
 
       - uses: docker/setup-buildx-action@v3
 
@@ -47,8 +48,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
-            ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.SERVICE_NAME }}:latest
+            ${{ env.AR_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+            ${{ env.AR_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.SERVICE_NAME }}:latest
           build-args: SERVICE=user
           cache-from: type=gha
           cache-to: type=gha,mode=max
