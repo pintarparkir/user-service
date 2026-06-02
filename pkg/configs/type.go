@@ -25,7 +25,7 @@ type Config struct {
 	RedisDB        int    `env:"REDIS_DB" envDefault:"0"`
 	RedisAppConfig string `env:"REDIS_APP_CONFIG" envDefault:"user-service"`
 
-	OTLPEndpoint string `env:"OTLP_ENDPOINT" envDefault:"localhost:4317"`
+	OTLPEndpoint string `env:"OTLP_ENDPOINT" envDefault:""`
 
 	// pgcrypto symmetric key for PII columns (phone_e164_enc, email_enc).
 	// Source from Cloud Secret Manager in production — never commit a real key.
