@@ -1,4 +1,3 @@
-// Package-level facades — keep call-sites short: logger.Info(ctx, "msg", fields).
 package logger
 
 import "go.uber.org/zap/zapcore"
